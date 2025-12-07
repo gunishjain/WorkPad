@@ -2,7 +2,6 @@ package com.gunishjain.workpad.domain.model
 
 data class Page(
      val id: String,
-     val userId: String,
      val parentId: String?,
      val title: String,
      val content: String,

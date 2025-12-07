@@ -16,6 +16,7 @@ kotlinxSerialization = "1.8.1"
 navigation = "2.9.4"
 supabase = "3.0.0"
 retrofit-serialization = "1.0.0"
+retrofit = "3.0.0"
 
 
 [libraries]
@@ -46,6 +47,7 @@ supabase-postgrest-kt = { group = "io.github.jan-tennert.supabase", name = "post
 supabase-auth-kt = { group = "io.github.jan-tennert.supabase", name = "auth-kt", version.ref = "supabase" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 retrofit-serialization-converter = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofit-serialization" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 
 
 

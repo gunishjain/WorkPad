@@ -9,7 +9,7 @@ fun CacheStateEntity.toDomain(): CacheState {
         lruScore = lruScore,
         lfuScore = lfuScore,
         finalScore = finalScore,
-        isLocallyCached = isLocallyCached
+        isLocallyCached = isCached
     )
 }
 
@@ -19,6 +19,6 @@ fun CacheState.toEntity(): CacheStateEntity {
         lruScore = lruScore,
         lfuScore = lfuScore,
         finalScore = finalScore,
-        isLocallyCached = isLocallyCached
+        isCached = isLocallyCached
     )
 }

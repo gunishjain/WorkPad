@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,8 +20,29 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val properties = Properties()
+        properties.load(rootProject.file("local.properties").inputStream())
+
+        buildConfigField(
+            "String",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "\"${properties.getProperty("SUPABASE_PUBLISHABLE_KEY")}\""
+        )
+
+        buildConfigField(
+            "String",
+            "SECRET",
+            "\"${properties.getProperty("SECRET")}\""
+        )
+
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${properties.getProperty("SUPABASE_URL")}\""
+        )
+
     }
 
     buildTypes {
@@ -40,6 +63,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     
     room {
@@ -76,6 +100,8 @@ dependencies {
     // work manager
     implementation(libs.work.runtime.ktx)
 
+    //retrofit
+    implementation(libs.retrofit)
 
     //supabase
     implementation(libs.supabase.postgrest.kt)
