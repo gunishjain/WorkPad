@@ -1,9 +1,11 @@
 package com.gunishjain.workpad.domain.model
 
+import kotlinx.datetime.Instant
+
 data class User(
-    val id: String,              // Maps to Supabase user_id (uuid)
+    val id: String,              // Maps to Supabase id
     val email: String,
     val name: String?,
-    val createdAt: Long,
-    val updatedAt: Long
+    val createdAt: Instant?,
+    val updatedAt: Instant?
 )
