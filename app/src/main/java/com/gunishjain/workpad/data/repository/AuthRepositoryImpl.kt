@@ -107,23 +107,31 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun observeAuthState(): Flow<User?> {
         return auth.sessionStatus.map { sessionStatus ->
-            when (sessionStatus) {
-                is SessionStatus.Authenticated -> {
-                    val supabaseUser = sessionStatus.session.user ?: return@map null
-                    User(
-                        id = supabaseUser.id,
-                        email = supabaseUser.email ?: "",
-                        name = supabaseUser.userMetadata?.get("username")?.toString(),
-                        createdAt = supabaseUser.createdAt,
-                        updatedAt = supabaseUser.updatedAt
-                    )
+            try {
+                when (sessionStatus) {
+                    is SessionStatus.Authenticated -> {
+                        val supabaseUser = sessionStatus.session.user ?: return@map null
+                        User(
+                            id = supabaseUser.id,
+                            email = supabaseUser.email ?: "",
+                            name = supabaseUser.userMetadata?.get("username")?.toString(),
+                            createdAt = supabaseUser.createdAt,
+                            updatedAt = supabaseUser.updatedAt
+                        )
+                    }
+                    else -> null
                 }
-                else -> null
+            } catch (e: Exception) {
+                null
             }
         }
     }
 
     override suspend fun isAuthenticated(): Boolean {
-        return auth.currentSessionOrNull() != null
+        return try {
+            auth.currentSessionOrNull() != null
+        } catch (e: Exception) {
+            false
+        }
     }
 }
