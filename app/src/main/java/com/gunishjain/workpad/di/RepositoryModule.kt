@@ -2,6 +2,7 @@ package com.gunishjain.workpad.di
 
 import com.gunishjain.workpad.data.repository.AuthRepositoryImpl
 import com.gunishjain.workpad.data.repository.PageRepositoryImpl
+import com.gunishjain.workpad.data.repository.SyncRepositoryImpl
 import com.gunishjain.workpad.domain.repository.AuthRepository
 import com.gunishjain.workpad.domain.repository.PageRepository
 import com.gunishjain.workpad.domain.repository.SyncRepository
@@ -30,7 +31,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSyncRepository(
-        impl: SyncRepository
+        impl: SyncRepositoryImpl
     ) : SyncRepository
 
 }

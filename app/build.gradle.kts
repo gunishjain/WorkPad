@@ -106,6 +106,7 @@ dependencies {
     //supabase
     implementation(libs.supabase.postgrest.kt)
     implementation(libs.supabase.auth.kt)
+    implementation(libs.ktor.client.android)
 
 
     implementation(libs.androidx.navigation.compose)
