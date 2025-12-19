@@ -81,8 +81,8 @@ fun LoginScreen(
             value = uiState.password,
             onValueChange = { onAction(LoginAction.PasswordChange(it)) },
             label = { Text("Password") },
-            isError = uiState.passwordError != null,
-            supportingText = uiState.passwordError?.let { { Text(it) } },
+            isError = false,
+            supportingText = null,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true

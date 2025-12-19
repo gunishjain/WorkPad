@@ -52,7 +52,7 @@ class AuthViewModel @Inject constructor(
         when (action) {
             is LoginAction.EmailChange -> {
                 _loginState.update {
-                    it.copy(email = action.email)
+                    it.copy(email = action.email,emailError = null)
                 }
             }
             is LoginAction.PasswordChange -> {
@@ -74,17 +74,17 @@ class AuthViewModel @Inject constructor(
             }
             is SignupAction.EmailChange -> {
                 _registerState.update {
-                    it.copy(email = action.email)
+                    it.copy(email = action.email, emailError = null)
                 }
             }
             is SignupAction.PasswordChange -> {
                 _registerState.update {
-                    it.copy(password = action.password)
+                    it.copy(password = action.password, passwordError = null)
                 }
             }
             is SignupAction.UsernameChange -> {
                 _registerState.update {
-                    it.copy(username = action.username)
+                    it.copy(username = action.username, usernameError = null)
                 }
             }
             SignupAction.Register -> {
@@ -106,18 +106,22 @@ class AuthViewModel @Inject constructor(
             _loginState.update {
                 it.copy(loading = true)
             }
-            try {
-                val user = repository.signIn(email,password)
-                Log.d("Login", "Login successful with id: ${user.isSuccess}")
+            
+            val result = repository.signIn(email, password)
+            
+            result.onSuccess { user ->
+                Log.d("Login", "Login successful with id: ${user.id}")
                 _loginState.update {
                     it.copy(success = true)
                 }
-
-            } catch (e: Exception) {
+                sendEvent(AuthNavigationEvent.NavigateToHome)
+            }.onFailure { e ->
+                Log.e("Login", "Login failed", e)
                 _loginState.update {
                     it.copy(error = e.message ?: "Something went wrong")
                 }
             }
+            
             _loginState.update {
                 it.copy(loading = false)
             }
@@ -125,7 +129,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun register(email: String, password: String,name: String) {
+    fun register(email: String, password: String, name: String) {
 
         if(!validateRegister()) return
 
@@ -133,17 +137,22 @@ class AuthViewModel @Inject constructor(
             _registerState.update {
                 it.copy(loading = true)
             }
-            try {
-                val user = repository.signUp(email, password, name)
-                Log.d("Register", "Register successful with id: ${user.isSuccess}")
+            
+            val result = repository.signUp(email, password, name)
+            
+            result.onSuccess { user ->
+                Log.d("Register", "Register successful with id: ${user.id}")
                 _registerState.update {
                     it.copy(signupSuccess = true)
                 }
-            } catch (e: Exception) {
+                sendEvent(AuthNavigationEvent.NavigateToHome)
+            }.onFailure { e ->
+                Log.e("Register", "Register failed", e)
                 _registerState.update {
                     it.copy(signupError = e.message ?: "Something went wrong")
                 }
             }
+            
             _registerState.update {
                 it.copy(loading = false)
             }
@@ -152,18 +161,15 @@ class AuthViewModel @Inject constructor(
 
     fun validate(): Boolean {
         val email = _loginState.value.email
-        val password = _loginState.value.password
 
         val isEmailValid = EMAIL_ADDRESS.matcher(email).matches()
-        val isPasswordValid = password.length >= 6
 
         _loginState.update {
             it.copy(
                 emailError = if (isEmailValid) null else "Invalid email",
-                passwordError = if (isPasswordValid) null else "Password must be at least 6 characters"
             )
         }
-        return isEmailValid && isPasswordValid
+        return isEmailValid
     }
 
     fun validateRegister(): Boolean {
