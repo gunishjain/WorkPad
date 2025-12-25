@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gunishjain.workpad.ui.home.components.PageRow
 
 @Composable
 fun HomeScreen(
@@ -77,7 +78,7 @@ fun HomeScreen(
                 }
 
                 FloatingActionButton(
-                    onClick = { onAction(HomeAction.AddNote) },
+                    onClick = { onAction(HomeAction.AddNote(null)) },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
@@ -144,7 +145,7 @@ fun HomeScreen(
                     }
 
                     IconButton(
-                        onClick = { onAction(HomeAction.AddNote) }
+                        onClick = { onAction(HomeAction.AddNote(null)) }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -156,19 +157,24 @@ fun HomeScreen(
             }
 
             if (!uiState.isPrivateListCollapsed) {
+                val rootPages = uiState.pages.filter { it.parentId == null }
 
-                if(uiState.pages.isEmpty()){
+                if (rootPages.isEmpty()) {
                     Text(
                         text = "No Pages Found, press on '+' to add a new page",
-                        modifier = Modifier.padding(vertical = 8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp).padding(start = 16.dp),
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
                 } else {
-                    // Show Pages
-
+                    rootPages.forEach { page ->
+                        PageRow(
+                            page = page,
+                            allPages = uiState.pages,
+                            onAction = onAction
+                        )
+                    }
                 }
-
             }
         }
     }

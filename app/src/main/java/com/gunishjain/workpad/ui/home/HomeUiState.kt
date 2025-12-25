@@ -10,4 +10,5 @@ data class HomeUiState(
     val isError: Boolean = false,
     val error: String ? = null,
     val isPrivateListCollapsed: Boolean = false,
+    val isParentPageExpanded: MutableMap<String, Boolean> = mutableMapOf()
 )

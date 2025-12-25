@@ -34,7 +34,7 @@ class HomeViewModel @Inject constructor(
 
     fun onAction(action: HomeAction){
         when(action){
-            HomeAction.AddNote -> addNote()
+            is HomeAction.AddNote -> addNote(action.parentId)
             HomeAction.CollapsePrivateList -> {
                _uiState.update {
                    it.copy(
@@ -44,6 +44,18 @@ class HomeViewModel @Inject constructor(
             }
             HomeAction.SearchInNotes -> TODO()
             HomeAction.ToggleSort -> TODO()
+            is HomeAction.AddChildPage -> addNote(action.parentId)
+            is HomeAction.OpenPage -> toggleParentPage(action.pageId)
+        }
+    }
+
+    private fun toggleParentPage(pageId: String) {
+        _uiState.update {
+            it.copy(
+                isParentPageExpanded = it.isParentPageExpanded.apply {
+                    this[pageId] = !(this[pageId] ?: false)
+                }
+            )
         }
     }
 
@@ -68,16 +80,17 @@ class HomeViewModel @Inject constructor(
                _uiState.update {
                    it.copy(error = error.message)
                }
-           }.collect {
-                   _uiState.update {
-                       it.copy(pages = it.pages)
-                   }
+           }.collect { pages ->
+               _uiState.update {
+                   it.copy(pages = pages)
                }
+           }
         }
     }
 
-    private fun addNote(){
+    private fun addNote(parentId: String?){
 
+        Log.d("HomeViewModel", "Add Page clicked with parentId: $parentId")
     }
 
     fun clearError() {
