@@ -1,14 +1,19 @@
 package com.gunishjain.workpad.data.repository
 
 import com.gunishjain.workpad.domain.model.User
+import com.gunishjain.workpad.domain.repository.AuthError
 import com.gunishjain.workpad.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.ResponseException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.net.ConnectException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,39 +22,55 @@ class AuthRepositoryImpl @Inject constructor(
     private val auth: Auth
 ) : AuthRepository {
 
+    private fun mapToAuthError(e: Exception): AuthError {
+        return when (e) {
+            is HttpRequestTimeoutException, is ConnectException, is UnknownHostException -> AuthError.NetworkError
+            is ResponseException -> {
+                val message = e.message?.lowercase() ?: ""
+                when {
+                    message.contains("invalid login credentials") || message.contains("invalid_credentials") -> AuthError.InvalidCredentials
+                    message.contains("user already registered") || message.contains("already_exists") -> AuthError.UserAlreadyExists
+                    message.contains("weak_password") -> AuthError.WeakPassword
+                    else -> AuthError.Unknown(e.message)
+                }
+            }
+            else -> {
+                val message = e.message?.lowercase() ?: ""
+                when {
+                    message.contains("invalid login credentials") || message.contains("invalid_credentials") -> AuthError.InvalidCredentials
+                    message.contains("user already registered") || message.contains("already_exists") -> AuthError.UserAlreadyExists
+                    else -> AuthError.Unknown(e.message)
+                }
+            }
+        }
+    }
+
     override suspend fun signUp(
         email: String,
         password: String,
         name: String?
     ): Result<User> {
         return try {
-
-            val result = auth.signUpWith(Email) {
-                apply {
-                    this.email = email
-                    this.password = password
-                    data = buildJsonObject {
-                        put("username", name)
-                    }
+            val supabaseUser = auth.signUpWith(Email) {
+                this.email = email
+                this.password = password
+                data = buildJsonObject {
+                    put("username", name)
                 }
-            }
-            val supabaseUser = result
-                ?: return Result.failure(IllegalStateException("User object is null"))
+            } ?: return Result.failure(AuthError.Unknown("User creation failed: No data returned"))
 
-            val mappedUser = User(
-                id = supabaseUser.id,
-                email = supabaseUser.email ?: "",
-                name = name,
-                createdAt = supabaseUser.createdAt,
-                updatedAt = supabaseUser.updatedAt
+            Result.success(
+                User(
+                    id = supabaseUser.id,
+                    email = supabaseUser.email ?: "",
+                    name = name,
+                    createdAt = supabaseUser.createdAt,
+                    updatedAt = supabaseUser.updatedAt
+                )
             )
-
-            Result.success(mappedUser)
-
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(mapToAuthError(e))
         }
-
     }
 
     override suspend fun signIn(
@@ -62,21 +83,20 @@ class AuthRepositoryImpl @Inject constructor(
                 this.password = password
             }
             
-            // After successful sign in, get the current user
             val supabaseUser = auth.currentUserOrNull()
-                ?: return Result.failure(IllegalStateException("User object is null after sign in"))
+                ?: return Result.failure(AuthError.SessionExpired)
             
-            val mappedUser = User(
-                id = supabaseUser.id,
-                email = supabaseUser.email ?: "",
-                name = supabaseUser.userMetadata?.get("username")?.toString(),
-                createdAt = supabaseUser.createdAt,
-                updatedAt = supabaseUser.updatedAt
+            Result.success(
+                User(
+                    id = supabaseUser.id,
+                    email = supabaseUser.email ?: "",
+                    name = supabaseUser.userMetadata?.get("username")?.toString(),
+                    createdAt = supabaseUser.createdAt,
+                    updatedAt = supabaseUser.updatedAt
+                )
             )
-            
-            Result.success(mappedUser)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(mapToAuthError(e))
         }
     }
 
@@ -85,44 +105,45 @@ class AuthRepositoryImpl @Inject constructor(
             auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(mapToAuthError(e))
         }
     }
 
-    override suspend fun getCurrentUser(): User? {
+    override suspend fun getCurrentUser(): Result<User?> {
         return try {
-            val supabaseUser = auth.currentUserOrNull() ?: return null
-            
-            User(
-                id = supabaseUser.id,
-                email = supabaseUser.email ?: "",
-                name = supabaseUser.userMetadata?.get("username")?.toString(),
-                createdAt = supabaseUser.createdAt,
-                updatedAt = supabaseUser.updatedAt
-            )
+            val supabaseUser = auth.currentUserOrNull()
+            if (supabaseUser == null) {
+                Result.success(null)
+            } else {
+                Result.success(
+                    User(
+                        id = supabaseUser.id,
+                        email = supabaseUser.email ?: "",
+                        name = supabaseUser.userMetadata?.get("username")?.toString(),
+                        createdAt = supabaseUser.createdAt,
+                        updatedAt = supabaseUser.updatedAt
+                    )
+                )
+            }
         } catch (e: Exception) {
-            null
+            Result.failure(mapToAuthError(e))
         }
     }
 
     override fun observeAuthState(): Flow<User?> {
         return auth.sessionStatus.map { sessionStatus ->
-            try {
-                when (sessionStatus) {
-                    is SessionStatus.Authenticated -> {
-                        val supabaseUser = sessionStatus.session.user ?: return@map null
-                        User(
-                            id = supabaseUser.id,
-                            email = supabaseUser.email ?: "",
-                            name = supabaseUser.userMetadata?.get("username")?.toString(),
-                            createdAt = supabaseUser.createdAt,
-                            updatedAt = supabaseUser.updatedAt
-                        )
-                    }
-                    else -> null
+            when (sessionStatus) {
+                is SessionStatus.Authenticated -> {
+                    val supabaseUser = sessionStatus.session.user ?: return@map null
+                    User(
+                        id = supabaseUser.id,
+                        email = supabaseUser.email ?: "",
+                        name = supabaseUser.userMetadata?.get("username")?.toString(),
+                        createdAt = supabaseUser.createdAt,
+                        updatedAt = supabaseUser.updatedAt
+                    )
                 }
-            } catch (e: Exception) {
-                null
+                else -> null
             }
         }
     }

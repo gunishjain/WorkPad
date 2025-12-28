@@ -39,6 +39,7 @@ object SupabaseModule {
     fun provideSupabaseDatabase(client: SupabaseClient): Postgrest {
         return client.postgrest
     }
+    
     @Provides
     @Singleton
     fun provideSupabaseAuth(client: SupabaseClient): Auth {

@@ -9,7 +9,7 @@ interface AuthRepository {
     suspend fun signIn(email: String, password: String): Result<User>
     suspend fun signOut(): Result<Unit>
 
-    suspend fun getCurrentUser(): User?
+    suspend fun getCurrentUser(): Result<User?>
     fun observeAuthState(): Flow<User?>
 
     suspend fun isAuthenticated(): Boolean

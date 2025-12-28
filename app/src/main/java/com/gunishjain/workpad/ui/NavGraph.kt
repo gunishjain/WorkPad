@@ -7,6 +7,8 @@ import androidx.navigation.compose.composable
 import com.gunishjain.workpad.ui.auth.AuthNavigationEvent
 import com.gunishjain.workpad.ui.auth.login.LoginScreen
 import com.gunishjain.workpad.ui.auth.signup.SignupScreen
+import com.gunishjain.workpad.ui.home.HomeNavigationEvent
+import com.gunishjain.workpad.ui.home.HomeScreen
 
 @Composable
 fun NavGraph(
@@ -15,7 +17,7 @@ fun NavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = LoginRoute
+        startDestination = HomeRoute
     ) {
 
         composable<LoginRoute> {
@@ -24,7 +26,7 @@ fun NavGraph(
                     when(it) {
                         AuthNavigationEvent.NavigateToSignUp -> navController.navigate(SignUpRoute)
                         AuthNavigationEvent.NavigateBack -> navController.popBackStack()
-                        AuthNavigationEvent.NavigateToHome -> TODO()
+                        AuthNavigationEvent.NavigateToHome -> navController.navigate(HomeRoute)
                         AuthNavigationEvent.NavigateToLogin -> Unit
                     }
                 }
@@ -37,8 +39,23 @@ fun NavGraph(
                     when(it) {
                         AuthNavigationEvent.NavigateToSignUp -> Unit
                         AuthNavigationEvent.NavigateBack -> navController.popBackStack()
-                        AuthNavigationEvent.NavigateToHome -> TODO()
+                        AuthNavigationEvent.NavigateToHome -> navController.navigate(HomeRoute)
                         AuthNavigationEvent.NavigateToLogin -> navController.navigate(LoginRoute)
+                    }
+                }
+            )
+        }
+
+        composable<HomeRoute> {
+            HomeScreen(
+                onNavigate = {
+                    when(it) {
+                        is HomeNavigationEvent.NavigateToNote -> TODO()
+                        HomeNavigationEvent.NavigateToLogin -> {
+                            navController.navigate(LoginRoute) {
+                                popUpTo(HomeRoute) { inclusive = true }
+                            }
+                        }
                     }
                 }
             )

@@ -23,8 +23,9 @@ class SyncRepositoryImpl @Inject constructor(
     override suspend fun syncLocalToRemote(): Result<Unit> {
         return try {
             // Get current user ID
-            val currentUser = authRepository.getCurrentUser()
-                ?: return Result.failure(Exception("User not authenticated"))
+            val currentUser = authRepository.getCurrentUser().getOrElse { 
+                return Result.failure(it)
+            } ?: return Result.failure(Exception("User not authenticated"))
 
             // Get all local pages (as a snapshot, not Flow)
             val localPages = localDB.getAllPages().first()
@@ -59,8 +60,9 @@ class SyncRepositoryImpl @Inject constructor(
     override suspend fun syncRemoteToLocal(): Result<Unit> {
         return try {
             // Get current user ID
-            val currentUser = authRepository.getCurrentUser()
-                ?: return Result.failure(Exception("User not authenticated"))
+            val currentUser = authRepository.getCurrentUser().getOrElse { 
+                return Result.failure(it)
+            } ?: return Result.failure(Exception("User not authenticated"))
 
             // Fetch all pages from Supabase for current user
             val remotePages = remoteDB.from("pages")

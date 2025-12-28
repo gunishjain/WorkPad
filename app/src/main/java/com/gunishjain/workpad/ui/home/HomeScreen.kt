@@ -5,8 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -123,7 +126,7 @@ fun HomeScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
+                        imageVector = if(uiState.isPrivateListCollapsed) Icons.AutoMirrored.Filled.KeyboardArrowLeft else Icons.Default.KeyboardArrowDown,
                         contentDescription = "Expand/Collapse",
                         tint = Color.Gray,
                         modifier = Modifier.size(20.dp)

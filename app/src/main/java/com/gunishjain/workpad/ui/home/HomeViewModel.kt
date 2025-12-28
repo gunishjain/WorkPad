@@ -7,6 +7,7 @@ import com.gunishjain.workpad.domain.repository.AuthRepository
 import com.gunishjain.workpad.domain.repository.PageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -22,15 +23,33 @@ class HomeViewModel @Inject constructor(
     private val pagesRepository: PageRepository
 ) : ViewModel() {
 
-    init {
-        fetchUserDetails()
-        fetchPages()
-    }
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
     private val _uiEvents = Channel<HomeNavigationEvent>(Channel.BUFFERED)
     val uiEvents = _uiEvents.receiveAsFlow()
+
+    init {
+        initialize()
+    }
+
+    private fun initialize() {
+        viewModelScope.launch {
+            // Give Supabase time to restore the session from storage
+            delay(300)
+            
+            val isAuthenticated = authRepository.isAuthenticated()
+            if (!isAuthenticated) {
+                Log.d("HomeViewModel", "User not authenticated, navigating to login")
+                _uiEvents.send(HomeNavigationEvent.NavigateToLogin)
+            } else {
+                Log.d("HomeViewModel", "User is authenticated, staying on home screen")
+                // Only fetch data if authenticated
+                fetchUserDetails()
+                fetchPages()
+            }
+        }
+    }
 
     fun onAction(action: HomeAction){
         when(action){
@@ -59,32 +78,33 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun fetchUserDetails() {
-        viewModelScope.launch {
-            try {
-                val user = authRepository.getCurrentUser()
+    private suspend fun fetchUserDetails() {
+        authRepository.getCurrentUser()
+            .onSuccess { user ->
                 _uiState.update {
+                    Log.d("HomeViewModel", "User fetched successfully: $user")
                     it.copy(userId = user?.id, username = user?.name)
                 }
-            } catch (e: Exception) {
-                Log.d("HomeViewModel", "Error fetching user details: ${e.message}")
-                TODO("Navigate to login screen")
             }
-        }
+            .onFailure { error ->
+                Log.e("HomeViewModel", "Error fetching user details", error)
+                _uiState.update {
+                    it.copy(error = error.message)
+                }
+            }
     }
 
-    private fun fetchPages(){
-        viewModelScope.launch {
-           pagesRepository.getAllPages().catch { error ->
-               Log.d("HomeViewModel", "Error fetching pages: ${error.message}")
-               _uiState.update {
-                   it.copy(error = error.message)
-               }
-           }.collect { pages ->
-               _uiState.update {
-                   it.copy(pages = pages)
-               }
-           }
+    private suspend fun fetchPages(){
+        pagesRepository.getAllPages().catch { error ->
+            Log.d("HomeViewModel", "Error fetching pages: ${error.message}")
+            _uiState.update {
+                it.copy(error = error.message)
+            }
+        }.collect { pages ->
+            Log.d("HomeViewModel", "fetching pages: $pages")
+            _uiState.update {
+                it.copy(pages = pages)
+            }
         }
     }
 
