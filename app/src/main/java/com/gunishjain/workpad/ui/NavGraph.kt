@@ -50,6 +50,9 @@ fun NavGraph(
             HomeScreen(
                 onNavigate = {
                     when(it) {
+                        is HomeNavigationEvent.NavigateToCreateNote -> {
+                            navController.navigate(CreateNoteRoute(parentId = it.parentId))
+                        }
                         is HomeNavigationEvent.NavigateToNote -> TODO()
                         HomeNavigationEvent.NavigateToLogin -> {
                             navController.navigate(LoginRoute) {

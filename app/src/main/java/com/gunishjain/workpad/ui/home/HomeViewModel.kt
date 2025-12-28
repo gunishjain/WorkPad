@@ -109,8 +109,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun addNote(parentId: String?){
-
-        Log.d("HomeViewModel", "Add Page clicked with parentId: $parentId")
+        viewModelScope.launch {
+            _uiEvents.send(HomeNavigationEvent.NavigateToCreateNote(parentId))
+        }
     }
 
     fun clearError() {
