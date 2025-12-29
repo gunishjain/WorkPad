@@ -9,9 +9,18 @@ import com.gunishjain.workpad.domain.model.Page
 import com.gunishjain.workpad.domain.repository.PageRepository
 import com.gunishjain.workpad.ui.CreateNoteRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,8 +42,59 @@ class CreateNoteViewModel @Inject constructor(
     private val _uiEvents = Channel<CreateNoteEvent>(Channel.BUFFERED)
     val uiEvents = _uiEvents.receiveAsFlow()
 
+    private val noteId = UUID.randomUUID().toString()
+    private val createdAt = System.currentTimeMillis()
+    private var hasBeenSaved = false
+
     init {
         fetchParentTitle()
+        setupAutoSave()
+    }
+
+    fun onAction(action: CreateNoteAction) {
+        when(action) {
+            is CreateNoteAction.OnTitleChange -> _uiState.update { it.copy(title = action.title) }
+            is CreateNoteAction.OnContentChange -> _uiState.update { it.copy(content = action.content) }
+            CreateNoteAction.DiscardNote -> TODO()
+            CreateNoteAction.NavigateBack -> moveBack()
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun setupAutoSave() {
+        viewModelScope.launch {
+            _uiState
+                .map { it.title to it.content }
+                .distinctUntilChanged()
+                .debounce(500L)
+                .filter { (title, content) -> title.isNotBlank() || content.isNotBlank() }
+                .flatMapLatest { (title, content) ->
+                    flow {
+                        val page = Page(
+                            id = noteId,
+                            parentId = parentId,
+                            title = title,
+                            content = content,
+                            createdAt = createdAt,
+                            updatedAt = System.currentTimeMillis(),
+                            isFavorite = false
+                        )
+                        
+                        val result = if (!hasBeenSaved) {
+                            pageRepository.createPage(page).onSuccess { hasBeenSaved = true }
+                        } else {
+                            pageRepository.updatePage(page)
+                        }
+                        emit(result)
+                    }
+                }
+                .flowOn(Dispatchers.IO)
+                .collect { result ->
+                    result.onFailure { error -> 
+                        Log.e("CreateNoteViewModel", "Auto-save failed: ${error.message}") 
+                    }
+                }
+        }
     }
 
     private fun fetchParentTitle() {
@@ -47,61 +107,28 @@ class CreateNoteViewModel @Inject constructor(
         }
     }
 
-    fun onAction(action: CreateNoteAction) {
-        when(action) {
-            is CreateNoteAction.OnTitleChange -> updateTitle(action.title)
-            is CreateNoteAction.OnContentChange -> updateContent(action.content)
-            CreateNoteAction.SaveNote -> saveNote()
-            CreateNoteAction.DiscardNote -> TODO()
-            CreateNoteAction.NavigateBack -> moveBack()
-        }
-    }
-
-    private fun updateTitle(title: String) {
-        _uiState.update { it.copy(title = title) }
-    }
-
-    private fun updateContent(content: String) {
-        _uiState.update { it.copy(content = content) }
-    }
-
     private fun moveBack() {
         viewModelScope.launch {
+            val currentState = _uiState.value
+            if (currentState.title.isNotBlank() || currentState.content.isNotBlank()) {
+                val page = Page(
+                    id = noteId,
+                    parentId = parentId,
+                    title = currentState.title,
+                    content = currentState.content,
+                    createdAt = createdAt,
+                    updatedAt = System.currentTimeMillis(),
+                    isFavorite = false
+                )
+                if (!hasBeenSaved) {
+                    pageRepository.createPage(page)
+                } else {
+                    pageRepository.updatePage(page)
+                }
+            }
             _uiEvents.send(CreateNoteEvent.NavigateBack)
         }
     }
-
-    private fun saveNote() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
-
-            val page = Page(
-                id = UUID.randomUUID().toString(),
-                parentId = parentId,
-                title = _uiState.value.title,
-                content = _uiState.value.content,
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-                isFavorite = false
-            )
-
-            pageRepository.createPage(page)
-                .onSuccess {
-                    _uiEvents.send(CreateNoteEvent.NavigateBack)
-                }
-                .onFailure { error ->
-
-                    Log.d("CreateNoteViewModel", "Error saving note: ${error.message}")
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            error = error.message
-                        )
-                    }
-                }
-            }
-
-        }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)

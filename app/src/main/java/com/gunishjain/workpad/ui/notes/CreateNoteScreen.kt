@@ -108,7 +108,7 @@ fun NoteEditorScreen(
                         )
                     }
 
-                    IconButton(onClick = { onAction(CreateNoteAction.SaveNote)}) {
+                    IconButton(onClick = { }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
 
@@ -151,14 +151,6 @@ fun NoteEditorScreen(
                     color = Color.Black
                 ),
                 decorationBox = { inner ->
-                    if (uiState.title.isEmpty()) {
-                        Text(
-                            "Title",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Gray
-                        )
-                    }
                     inner()
                 },
                 modifier = Modifier
@@ -180,13 +172,6 @@ fun NoteEditorScreen(
                     color = Color.Black
                 ),
                 decorationBox = { inner ->
-                    if (uiState.content.isEmpty()) {
-                        Text(
-                            "Start typing…",
-                            fontSize = 18.sp,
-                            color = Color.Gray
-                        )
-                    }
                     inner()
                 }
             )
