@@ -10,7 +10,7 @@ data class PageDto(
     @SerialName("parent_id") val parentId: String? = null,
     val title: String,
     val content: String,
-    @SerialName("created_at") val createdAt: Long,
-    @SerialName("updated_at") val updatedAt: Long,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
     @SerialName("is_favorite") val isFavorite: Boolean
 )

@@ -9,6 +9,8 @@ import com.gunishjain.workpad.ui.auth.login.LoginScreen
 import com.gunishjain.workpad.ui.auth.signup.SignupScreen
 import com.gunishjain.workpad.ui.home.HomeNavigationEvent
 import com.gunishjain.workpad.ui.home.HomeScreen
+import com.gunishjain.workpad.ui.notes.CreateNoteEvent
+import com.gunishjain.workpad.ui.notes.CreateNoteScreen
 
 @Composable
 fun NavGraph(
@@ -59,6 +61,16 @@ fun NavGraph(
                                 popUpTo(HomeRoute) { inclusive = true }
                             }
                         }
+                    }
+                }
+            )
+        }
+
+        composable<CreateNoteRoute> {
+            CreateNoteScreen(
+                onNavigate = {
+                    when(it) {
+                        CreateNoteEvent.NavigateBack -> navController.popBackStack()
                     }
                 }
             )
