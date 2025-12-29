@@ -64,7 +64,11 @@ class HomeViewModel @Inject constructor(
             HomeAction.SearchInNotes -> TODO()
             HomeAction.ToggleSort -> TODO()
             is HomeAction.AddChildPage -> addNote(action.parentId)
-            is HomeAction.OpenPage -> toggleParentPage(action.pageId)
+            is HomeAction.OpenPage -> {
+                viewModelScope.launch {
+                    _uiEvents.send(HomeNavigationEvent.NavigateToNote(action.pageId))
+                }
+            }
         }
     }
 

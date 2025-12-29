@@ -11,6 +11,7 @@ import com.gunishjain.workpad.ui.home.HomeNavigationEvent
 import com.gunishjain.workpad.ui.home.HomeScreen
 import com.gunishjain.workpad.ui.notes.CreateNoteEvent
 import com.gunishjain.workpad.ui.notes.CreateNoteScreen
+import com.gunishjain.workpad.ui.notes.EditNoteScreen
 
 @Composable
 fun NavGraph(
@@ -25,7 +26,7 @@ fun NavGraph(
         composable<LoginRoute> {
             LoginScreen(
                 onNavigate = {
-                    when(it) {
+                    when (it) {
                         AuthNavigationEvent.NavigateToSignUp -> navController.navigate(SignUpRoute)
                         AuthNavigationEvent.NavigateBack -> navController.popBackStack()
                         AuthNavigationEvent.NavigateToHome -> navController.navigate(HomeRoute)
@@ -38,7 +39,7 @@ fun NavGraph(
         composable<SignUpRoute> {
             SignupScreen(
                 onNavigate = {
-                    when(it) {
+                    when (it) {
                         AuthNavigationEvent.NavigateToSignUp -> Unit
                         AuthNavigationEvent.NavigateBack -> navController.popBackStack()
                         AuthNavigationEvent.NavigateToHome -> navController.navigate(HomeRoute)
@@ -51,11 +52,15 @@ fun NavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 onNavigate = {
-                    when(it) {
+                    when (it) {
                         is HomeNavigationEvent.NavigateToCreateNote -> {
                             navController.navigate(CreateNoteRoute(parentId = it.parentId))
                         }
-                        is HomeNavigationEvent.NavigateToNote -> TODO()
+
+                        is HomeNavigationEvent.NavigateToNote -> {
+                            navController.navigate(EditNoteRoute(pageId = it.noteId))
+                        }
+
                         HomeNavigationEvent.NavigateToLogin -> {
                             navController.navigate(LoginRoute) {
                                 popUpTo(HomeRoute) { inclusive = true }
@@ -69,7 +74,18 @@ fun NavGraph(
         composable<CreateNoteRoute> {
             CreateNoteScreen(
                 onNavigate = {
-                    when(it) {
+                    when (it) {
+                        CreateNoteEvent.NavigateBack -> navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+
+        composable<EditNoteRoute> {
+            EditNoteScreen(
+                onNavigate = {
+                    when (it) {
                         CreateNoteEvent.NavigateBack -> navController.popBackStack()
                     }
                 }
@@ -77,5 +93,4 @@ fun NavGraph(
         }
 
     }
-
 }

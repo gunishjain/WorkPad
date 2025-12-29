@@ -39,9 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gunishjain.workpad.ui.home.HomeScreen
-import com.gunishjain.workpad.ui.home.HomeUiState
-import kotlinx.serialization.json.JsonNull.content
+
 
 @Composable
 fun CreateNoteScreen(
@@ -65,7 +63,7 @@ fun CreateNoteScreen(
         }
     }
 
-    CreateNoteScreen(
+    NoteEditorScreen(
         onAction = viewModel::onAction,
         uiState = uiState
     )
@@ -74,7 +72,7 @@ fun CreateNoteScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateNoteScreen(
+fun NoteEditorScreen(
     onAction: (CreateNoteAction) -> Unit,
     uiState: CreateNoteUiState,
 ) {
@@ -95,16 +93,20 @@ fun CreateNoteScreen(
                     }
                 },
                 actions = {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text("Private") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = null
-                            )
-                        }
-                    )
+                    if (!uiState.isEditMode) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(uiState.parentTitle ?: "Private") },
+                            leadingIcon = {
+                                if (uiState.parentTitle == null) {
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = null
+                                    )
+                                }
+                            }
+                        )
+                    }
 
                     IconButton(onClick = { onAction(CreateNoteAction.SaveNote)}) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
@@ -137,7 +139,7 @@ fun CreateNoteScreen(
                     // When user presses enter in title → move to content
                     if (it.contains("\n")) {
                         onAction(CreateNoteAction.OnTitleChange(it.substringBefore("\n")))
-                        onAction(CreateNoteAction.OnContentChange(it.substringAfter("\n") + content))
+                        onAction(CreateNoteAction.OnContentChange(it.substringAfter("\n") + uiState.content))
                         focusManager.moveFocus(FocusDirection.Down)
                     } else {
                         onAction(CreateNoteAction.OnTitleChange(it))
@@ -178,7 +180,7 @@ fun CreateNoteScreen(
                     color = Color.Black
                 ),
                 decorationBox = { inner ->
-                    if (content.isEmpty()) {
+                    if (uiState.content.isEmpty()) {
                         Text(
                             "Start typing…",
                             fontSize = 18.sp,
@@ -197,7 +199,7 @@ fun CreateNoteScreen(
 @Composable
 fun CreateNoteScreenPreview() {
     MaterialTheme {
-        CreateNoteScreen(
+        NoteEditorScreen(
             onAction = {},
             uiState = CreateNoteUiState()
         )

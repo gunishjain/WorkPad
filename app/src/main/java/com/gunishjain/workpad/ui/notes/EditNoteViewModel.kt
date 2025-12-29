@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.gunishjain.workpad.domain.model.Page
 import com.gunishjain.workpad.domain.repository.PageRepository
-import com.gunishjain.workpad.ui.CreateNoteRoute
+import com.gunishjain.workpad.ui.EditNoteRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,33 +15,40 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
-class CreateNoteViewModel @Inject constructor(
+class EditNoteViewModel @Inject constructor(
     private val pageRepository: PageRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val route: CreateNoteRoute = savedStateHandle.toRoute()
-    val parentId: String? = route.parentId
+    private val route: EditNoteRoute = savedStateHandle.toRoute()
+    val pageId: String = route.pageId
 
-    private val _uiState = MutableStateFlow(CreateNoteUiState())
+    private val _uiState = MutableStateFlow(CreateNoteUiState(isEditMode = true))
     val uiState = _uiState.asStateFlow()
 
     private val _uiEvents = Channel<CreateNoteEvent>(Channel.BUFFERED)
     val uiEvents = _uiEvents.receiveAsFlow()
 
+    private var originalPage: Page? = null
+
     init {
-        fetchParentTitle()
+        loadNote()
     }
 
-    private fun fetchParentTitle() {
-        parentId?.let { id ->
-            viewModelScope.launch {
-                pageRepository.getPage(id).collect { parentPage ->
-                    _uiState.update { it.copy(parentTitle = parentPage?.title) }
+    private fun loadNote() {
+        viewModelScope.launch {
+            pageRepository.getPage(pageId).collect { page ->
+                page?.let {
+                    originalPage = it
+                    _uiState.update { state ->
+                        state.copy(
+                            title = it.title,
+                            content = it.content
+                        )
+                    }
                 }
             }
         }
@@ -73,25 +80,20 @@ class CreateNoteViewModel @Inject constructor(
 
     private fun saveNote() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
-
-            val page = Page(
-                id = UUID.randomUUID().toString(),
-                parentId = parentId,
+            val pageToUpdate = originalPage?.copy(
                 title = _uiState.value.title,
                 content = _uiState.value.content,
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-                isFavorite = false
-            )
+                updatedAt = System.currentTimeMillis()
+            ) ?: return@launch
 
-            pageRepository.createPage(page)
+            _uiState.update { it.copy(isSaving = true) }
+
+            pageRepository.updatePage(pageToUpdate)
                 .onSuccess {
                     _uiEvents.send(CreateNoteEvent.NavigateBack)
                 }
                 .onFailure { error ->
-
-                    Log.d("CreateNoteViewModel", "Error saving note: ${error.message}")
+                    Log.d("EditNoteViewModel", "Error updating note: ${error.message}")
                     _uiState.update {
                         it.copy(
                             isSaving = false,
@@ -99,9 +101,8 @@ class CreateNoteViewModel @Inject constructor(
                         )
                     }
                 }
-            }
-
         }
+    }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
