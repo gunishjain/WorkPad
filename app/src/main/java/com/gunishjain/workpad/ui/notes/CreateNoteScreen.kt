@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gunishjain.workpad.ui.notes.components.NoteSettingBottomSheet
 
 
 @Composable
@@ -80,6 +81,12 @@ fun NoteEditorScreen(
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
+    NoteSettingBottomSheet(
+        toggleBottomSheet = uiState.showBottomSheet,
+        isFavorite = uiState.isFavorite,
+        onAction = onAction
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -112,7 +119,7 @@ fun NoteEditorScreen(
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
 
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = { onAction(CreateNoteAction.ToggleBottomSheet) }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More")
                     }
                 },

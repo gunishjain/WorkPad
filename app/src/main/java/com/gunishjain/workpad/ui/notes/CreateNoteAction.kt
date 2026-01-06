@@ -6,4 +6,8 @@ sealed class CreateNoteAction {
     object DiscardNote : CreateNoteAction()
     object NavigateBack : CreateNoteAction()
 
+    object ToggleBottomSheet : CreateNoteAction()
+    object DeleteNote : CreateNoteAction()
+    object ToggleFavorite : CreateNoteAction()
+
 }

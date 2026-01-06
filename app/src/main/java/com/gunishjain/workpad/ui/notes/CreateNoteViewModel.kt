@@ -57,6 +57,24 @@ class CreateNoteViewModel @Inject constructor(
             is CreateNoteAction.OnContentChange -> _uiState.update { it.copy(content = action.content) }
             CreateNoteAction.DiscardNote -> TODO()
             CreateNoteAction.NavigateBack -> moveBack()
+            CreateNoteAction.ToggleBottomSheet -> {
+                _uiState.update { it.copy(showBottomSheet = !it.showBottomSheet) }
+            }
+            CreateNoteAction.DeleteNote -> deleteNote()
+            CreateNoteAction.ToggleFavorite -> toggleFavorite()
+        }
+    }
+
+    private fun toggleFavorite() {
+        _uiState.update { it.copy(isFavorite = !it.isFavorite, showBottomSheet = false) }
+    }
+
+    private fun deleteNote() {
+        viewModelScope.launch {
+            if (hasBeenSaved) {
+                pageRepository.deletePage(noteId)
+            }
+            _uiEvents.send(CreateNoteEvent.NavigateBack)
         }
     }
 
@@ -64,11 +82,11 @@ class CreateNoteViewModel @Inject constructor(
     private fun setupAutoSave() {
         viewModelScope.launch {
             _uiState
-                .map { it.title to it.content }
+                .map { Triple(it.title, it.content, it.isFavorite) }
                 .distinctUntilChanged()
                 .debounce(500L)
-                .filter { (title, content) -> title.isNotBlank() || content.isNotBlank() }
-                .flatMapLatest { (title, content) ->
+                .filter { (title, content, _) -> title.isNotBlank() || content.isNotBlank() }
+                .flatMapLatest { (title, content, isFav) ->
                     flow {
                         val page = Page(
                             id = noteId,
@@ -77,7 +95,7 @@ class CreateNoteViewModel @Inject constructor(
                             content = content,
                             createdAt = createdAt,
                             updatedAt = System.currentTimeMillis(),
-                            isFavorite = false
+                            isFavorite = isFav
                         )
                         
                         val result = if (!hasBeenSaved) {
@@ -118,7 +136,7 @@ class CreateNoteViewModel @Inject constructor(
                     content = currentState.content,
                     createdAt = createdAt,
                     updatedAt = System.currentTimeMillis(),
-                    isFavorite = false
+                    isFavorite = currentState.isFavorite
                 )
                 if (!hasBeenSaved) {
                     pageRepository.createPage(page)

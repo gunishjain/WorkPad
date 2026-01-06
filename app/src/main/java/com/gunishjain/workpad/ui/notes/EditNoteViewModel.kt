@@ -55,6 +55,22 @@ class EditNoteViewModel @Inject constructor(
             is CreateNoteAction.OnContentChange -> _uiState.update { it.copy(content = action.content) }
             CreateNoteAction.DiscardNote -> TODO()
             CreateNoteAction.NavigateBack -> moveBack()
+            CreateNoteAction.ToggleBottomSheet -> {
+                _uiState.update { it.copy(showBottomSheet = !it.showBottomSheet) }
+            }
+            CreateNoteAction.DeleteNote -> deleteNote()
+            CreateNoteAction.ToggleFavorite -> toggleFavorite()
+        }
+    }
+
+    private fun toggleFavorite() {
+        _uiState.update { it.copy(isFavorite = !it.isFavorite, showBottomSheet = false) }
+    }
+
+    private fun deleteNote() {
+        viewModelScope.launch {
+            pageRepository.deletePage(pageId)
+            _uiEvents.send(CreateNoteEvent.NavigateBack)
         }
     }
 
@@ -65,7 +81,8 @@ class EditNoteViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         title = page.title,
-                        content = page.content
+                        content = page.content,
+                        isFavorite = page.isFavorite
                     )
                 }
             }
@@ -76,18 +93,19 @@ class EditNoteViewModel @Inject constructor(
     private fun setupAutoSave() {
         viewModelScope.launch {
             _uiState
-                .map { it.title to it.content }
+                .map { Triple(it.title, it.content, it.isFavorite) }
                 .distinctUntilChanged()
                 .debounce(500L)
-                .filter { (title, content) ->
+                .filter { (title, content, isFav) ->
                     // Only save if content has actually changed from what we loaded
-                    originalPage != null && (title != originalPage?.title || content != originalPage?.content)
+                    originalPage != null && (title != originalPage?.title || content != originalPage?.content || isFav != originalPage?.isFavorite)
                 }
-                .flatMapLatest { (title, content) ->
+                .flatMapLatest { (title, content, isFav) ->
                     flow {
                         val pageToUpdate = originalPage?.copy(
                             title = title,
                             content = content,
+                            isFavorite = isFav,
                             updatedAt = System.currentTimeMillis()
                         )
                         if (pageToUpdate != null) {
@@ -111,9 +129,10 @@ class EditNoteViewModel @Inject constructor(
             val pageToUpdate = originalPage?.copy(
                 title = currentState.title,
                 content = currentState.content,
+                isFavorite = currentState.isFavorite,
                 updatedAt = System.currentTimeMillis()
             )
-            if (pageToUpdate != null && (currentState.title != originalPage?.title || currentState.content != originalPage?.content)) {
+            if (pageToUpdate != null && (currentState.title != originalPage?.title || currentState.content != originalPage?.content || currentState.isFavorite != originalPage?.isFavorite)) {
                 pageRepository.updatePage(pageToUpdate)
             }
             _uiEvents.send(CreateNoteEvent.NavigateBack)
