@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gunishjain.workpad.domain.repository.AuthRepository
 import com.gunishjain.workpad.domain.repository.PageRepository
+import com.gunishjain.workpad.ui.home.HomeNavigationEvent.NavigateToNote
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -66,9 +67,27 @@ class HomeViewModel @Inject constructor(
             is HomeAction.AddChildPage -> addNote(action.parentId)
             is HomeAction.OpenPage -> {
                 viewModelScope.launch {
-                    _uiEvents.send(HomeNavigationEvent.NavigateToNote(action.pageId))
+                    _uiEvents.send(NavigateToNote(action.pageId))
                 }
             }
+
+            HomeAction.CollapseFavList -> {
+                _uiState.update {
+                    it.copy(
+                        isFavListCollapsed = !it.isFavListCollapsed
+                    )
+                }
+            }
+            is HomeAction.DeletePage -> deletePage(action.pageId)
+        }
+    }
+
+    private fun deletePage(pageId: String) {
+        viewModelScope.launch {
+            pagesRepository.deletePage(pageId)
+                .onFailure { error ->
+                    _uiState.update { it.copy(error = error.message) }
+                }
         }
     }
 
@@ -106,8 +125,10 @@ class HomeViewModel @Inject constructor(
             }
         }.collect { pages ->
             Log.d("HomeViewModel", "fetching pages: $pages")
+
+            val favouritePages = pages.filter { it -> it.isFavorite }
             _uiState.update {
-                it.copy(pages = pages)
+                it.copy(pages = pages, favorites = favouritePages)
             }
         }
     }
